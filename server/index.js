@@ -19,6 +19,7 @@ let deviceStatus = {
 app.post('/sensor', (req, res) => {
     const { temperature, humidity } = req.body;
     sensorData = { temperature, humidity };
+    console.log('Received sensor data:', sensorData); // Add this line
     res.status(200).send('Sensor data received');
 });
 
@@ -33,6 +34,7 @@ app.get('/status', (req, res) => {
 app.post('/status', (req, res) => {
     const { heating, cooling } = req.body;
     deviceStatus = { heating, cooling };
+    console.log('Updated device status:', deviceStatus); // Add this line
     res.status(200).send('Device status updated');
 });
 
