@@ -1,43 +1,41 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
+const port = process.env.PORT || 3000;
 
-let temperature = 0;
-let humidity = 0;
-let heating = false;
-let cooling = false;
+app.use(cors());
+app.use(express.json());
 
-app.use(bodyParser.json());
+let sensorData = {
+    temperature: 0,
+    humidity: 0
+};
 
-app.get('/', (req, res) => {
-    res.send('Greenhouse Control Server');
+let deviceStatus = {
+    heating: false,
+    cooling: false
+};
+
+app.post('/sensor', (req, res) => {
+    const { temperature, humidity } = req.body;
+    sensorData = { temperature, humidity };
+    res.status(200).send('Sensor data received');
 });
 
 app.get('/sensor', (req, res) => {
-    res.json({ temperature, humidity });
-});
-
-app.post('/sensor', (req, res) => {
-    temperature = req.body.temperature;
-    humidity = req.body.humidity;
-    res.sendStatus(200);
-});
-
-app.get('/heat', (req, res) => {
-    heating = req.query.state === 'true';
-    res.sendStatus(200);
-});
-
-app.get('/cool', (req, res) => {
-    cooling = req.query.state === 'true';
-    res.sendStatus(200);
+    res.json(sensorData);
 });
 
 app.get('/status', (req, res) => {
-    res.json({ heating, cooling });
+    res.json(deviceStatus);
 });
 
-const port = process.env.PORT || 3000;
+app.post('/status', (req, res) => {
+    const { heating, cooling } = req.body;
+    deviceStatus = { heating, cooling };
+    res.status(200).send('Device status updated');
+});
+
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`Server running on port ${port}`);
 });
