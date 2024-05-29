@@ -2,57 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Greenhouse Control</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            width: 300px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        button {
-            width: 100px;
-            height: 40px;
-            margin: 10px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP8266 Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Greenhouse Control</h1>
-        <p>Temperature: <span id="temperature">Loading...</span> °C</p>
-        <p>Humidity: <span id="humidity">Loading...</span> %</p>
-        <button onclick="controlDevice('heat', true)">Heat ON</button>
-        <button onclick="controlDevice('heat', false)">Heat OFF</button>
-        <button onclick="controlDevice('cool', true)">Cool ON</button>
-        <button onclick="controlDevice('cool', false)">Cool OFF</button>
+    <h1>ESP8266 Control</h1>
+    <div>
+        <p>Temperature: <span id="temperature">-</span></p>
+        <p>Humidity: <span id="humidity">-</span></p>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <div>
+        <button onclick="toggleHeating()">Toggle Heating</button>
+        <button onclick="toggleCooling()">Toggle Cooling</button>
+    </div>
+
     <script>
-        const serverUrl = 'https://se-kc56.onrender.com'; // Replace with your Render app URL
+        const serverUrl = 'https://se-kc56.onrender.com';
 
         async function fetchSensorData() {
             try {
                 const response = await axios.get(`${serverUrl}/sensor`);
-                document.getElementById('temperature').textContent = response.data.temperature;
-                document.getElementById('humidity').textContent = response.data.humidity;
+                document.getElementById('temperature').innerText = response.data.temperature;
+                document.getElementById('humidity').innerText = response.data.humidity;
             } catch (error) {
                 console.error('Error fetching sensor data:', error);
             }
         }
 
-        async function controlDevice(device, state) {
+        async function toggleHeating() {
             try {
-                await axios.get(`${serverUrl}/${device}?state=${state}`);
+                const response = await axios.get(`${serverUrl}/status`);
+                const newStatus = { ...response.data, heating: !response.data.heating };
+                await axios.post(`${serverUrl}/status`, newStatus);
             } catch (error) {
-                console.error(`Error controlling ${device}:`, error);
+                console.error('Error toggling heating:', error);
+            }
+        }
+
+        async function toggleCooling() {
+            try {
+                const response = await axios.get(`${serverUrl}/status`);
+                const newStatus = { ...response.data, cooling: !response.data.cooling };
+                await axios.post(`${serverUrl}/status`, newStatus);
+            } catch (error) {
+                console.error('Error toggling cooling:', error);
             }
         }
 
         setInterval(fetchSensorData, 2000);
-        fetchSensorData();
     </script>
 </body>
 </html>
