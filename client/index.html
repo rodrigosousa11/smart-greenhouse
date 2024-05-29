@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Greenhouse Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 300px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        button {
+            width: 100px;
+            height: 40px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Greenhouse Control</h1>
+        <p>Temperature: <span id="temperature">Loading...</span> °C</p>
+        <p>Humidity: <span id="humidity">Loading...</span> %</p>
+        <button onclick="controlDevice('heat', true)">Heat ON</button>
+        <button onclick="controlDevice('heat', false)">Heat OFF</button>
+        <button onclick="controlDevice('cool', true)">Cool ON</button>
+        <button onclick="controlDevice('cool', false)">Cool OFF</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const serverUrl = 'https://your-render-app-url.onrender.com'; // Replace with your Render app URL
+
+        async function fetchSensorData() {
+            try {
+                const response = await axios.get(`${serverUrl}/sensor`);
+                document.getElementById('temperature').textContent = response.data.temperature;
+                document.getElementById('humidity').textContent = response.data.humidity;
+            } catch (error) {
+                console.error('Error fetching sensor data:', error);
+            }
+        }
+
+        async function controlDevice(device, state) {
+            try {
+                await axios.get(`${serverUrl}/${device}?state=${state}`);
+            } catch (error) {
+                console.error(`Error controlling ${device}:`, error);
+            }
+        }
+
+        setInterval(fetchSensorData, 2000);
+        fetchSensorData();
+    </script>
+</body>
+</html>
