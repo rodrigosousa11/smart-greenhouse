@@ -91,6 +91,11 @@
             color: white;
             transition: background-color 0.3s ease;
         }
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -98,6 +103,7 @@
     <div id="login">
         <input type="password" id="tokenInput" placeholder="Enter authentication token">
         <button onclick="login()">Login</button>
+        <div id="errorMessage">Invalid token, please try again.</div>
     </div>
     <div class="container" id="dashboard">
         <div class="chart-container">
@@ -119,6 +125,10 @@
         let authToken = localStorage.getItem('authToken');
 
         if (authToken) {
+            showDashboard();
+        }
+
+        function showDashboard() {
             document.getElementById('login').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             fetchSensorData();
@@ -127,15 +137,23 @@
             setInterval(fetchStatus, 2000);
         }
 
-        function login() {
+        async function login() {
             authToken = document.getElementById('tokenInput').value;
-            localStorage.setItem('authToken', authToken);
-            document.getElementById('login').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            fetchSensorData();
-            fetchStatus();
-            setInterval(fetchSensorData, 2000);
-            setInterval(fetchStatus, 2000);
+            try {
+                // Validate the token by making a request
+                const response = await axios.get(`${serverUrl}/sensor`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                // If request is successful, save the token and show the dashboard
+                localStorage.setItem('authToken', authToken);
+                showDashboard();
+            } catch (error) {
+                // If there's an error, show the error message
+                document.getElementById('errorMessage').style.display = 'block';
+                console.error('Invalid token:', error);
+            }
         }
 
         async function fetchSensorData() {
