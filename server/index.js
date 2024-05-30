@@ -17,25 +17,39 @@ let deviceStatus = {
 };
 
 app.post('/sensor', (req, res) => {
+    console.log('Received /sensor POST request with body:', req.body);
     const { temperature, humidity } = req.body;
-    sensorData = { temperature, humidity };
-    console.log('Received sensor data:', sensorData); // Add this line
-    res.status(200).send('Sensor data received');
+    if (temperature !== undefined && humidity !== undefined) {
+        sensorData = { temperature, humidity };
+        console.log('Valid sensor data received:', sensorData);
+        res.status(200).send('Sensor data received');
+    } else {
+        console.log('Invalid sensor data received:', req.body);
+        res.status(400).send('Invalid sensor data');
+    }
 });
 
 app.get('/sensor', (req, res) => {
+    console.log('Received /sensor GET request');
     res.json(sensorData);
 });
 
 app.get('/status', (req, res) => {
+    console.log('Received /status GET request');
     res.json(deviceStatus);
 });
 
 app.post('/status', (req, res) => {
+    console.log('Received /status POST request with body:', req.body);
     const { heating, cooling } = req.body;
-    deviceStatus = { heating, cooling };
-    console.log('Updated device status:', deviceStatus); // Add this line
-    res.status(200).send('Device status updated');
+    if (heating !== undefined && cooling !== undefined) {
+        deviceStatus = { heating, cooling };
+        console.log('Valid device status received:', deviceStatus);
+        res.status(200).send('Device status updated');
+    } else {
+        console.log('Invalid device status received:', req.body);
+        res.status(400).send('Invalid device status');
+    }
 });
 
 app.listen(port, () => {
