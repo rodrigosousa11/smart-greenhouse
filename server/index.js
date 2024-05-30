@@ -19,7 +19,6 @@ let deviceStatus = {
 app.post('/sensor', (req, res) => {
     console.log('Received /sensor POST request with body:', req.body);
     const { temperature, humidity } = req.body;
-    console.log(`Parsed temperature: ${temperature}, humidity: ${humidity}`);
     if (temperature !== undefined && humidity !== undefined) {
         sensorData = { temperature, humidity };
         console.log('Valid sensor data received:', sensorData);
@@ -29,7 +28,6 @@ app.post('/sensor', (req, res) => {
         res.status(400).send('Invalid sensor data');
     }
 });
-
 
 app.get('/sensor', (req, res) => {
     console.log('Received /sensor GET request');
