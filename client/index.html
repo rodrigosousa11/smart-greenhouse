@@ -22,7 +22,7 @@
             color: #333;
         }
         .container {
-            display: flex;
+            display: none;
             flex-direction: column;
             align-items: center;
             width: 100%;
@@ -69,11 +69,36 @@
             pointer-events: none;
             opacity: 0.5;
         }
+        #login {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #login input {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            width: 200px;
+        }
+        #login button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <h1>Greenhouse Dashboard</h1>
-    <div class="container">
+    <div id="login">
+        <input type="password" id="tokenInput" placeholder="Enter authentication token">
+        <button onclick="login()">Login</button>
+    </div>
+    <div class="container" id="dashboard">
         <div class="chart-container">
             <div class="chart-title">Temperature (°C)</div>
             <canvas id="temperatureChart"></canvas>
@@ -82,18 +107,43 @@
             <div class="chart-title">Humidity (%)</div>
             <canvas id="humidityChart"></canvas>
         </div>
-    </div>
-    <div class="controls">
-        <button id="heatingButton" onclick="toggleHeating()" class="off">Heating OFF</button>
-        <button id="coolingButton" onclick="toggleCooling()" class="off">Cooling OFF</button>
+        <div class="controls">
+            <button id="heatingButton" onclick="toggleHeating()" class="off">Heating OFF</button>
+            <button id="coolingButton" onclick="toggleCooling()" class="off">Cooling OFF</button>
+        </div>
     </div>
 
     <script>
         const serverUrl = 'https://se-kc56.onrender.com';
+        let authToken = localStorage.getItem('authToken');
+
+        if (authToken) {
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            fetchSensorData();
+            fetchStatus();
+            setInterval(fetchSensorData, 2000);
+            setInterval(fetchStatus, 2000);
+        }
+
+        function login() {
+            authToken = document.getElementById('tokenInput').value;
+            localStorage.setItem('authToken', authToken);
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            fetchSensorData();
+            fetchStatus();
+            setInterval(fetchSensorData, 2000);
+            setInterval(fetchStatus, 2000);
+        }
 
         async function fetchSensorData() {
             try {
-                const response = await axios.get(`${serverUrl}/sensor`);
+                const response = await axios.get(`${serverUrl}/sensor`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
                 const temperature = response.data.temperature;
                 const humidity = response.data.humidity;
                 updateCharts(temperature, humidity);
@@ -104,7 +154,11 @@
 
         async function fetchStatus() {
             try {
-                const response = await axios.get(`${serverUrl}/status`);
+                const response = await axios.get(`${serverUrl}/status`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
                 const heating = response.data.heating;
                 const cooling = response.data.cooling;
                 document.getElementById('heatingButton').innerText = heating ? 'Heating ON' : 'Heating OFF';
@@ -121,9 +175,17 @@
 
         async function toggleHeating() {
             try {
-                const response = await axios.get(`${serverUrl}/status`);
+                const response = await axios.get(`${serverUrl}/status`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
                 const newStatus = { ...response.data, heating: !response.data.heating };
-                await axios.post(`${serverUrl}/status`, newStatus);
+                await axios.post(`${serverUrl}/status`, newStatus, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
                 fetchStatus();
             } catch (error) {
                 console.error('Error toggling heating:', error);
@@ -132,9 +194,17 @@
 
         async function toggleCooling() {
             try {
-                const response = await axios.get(`${serverUrl}/status`);
+                const response = await axios.get(`${serverUrl}/status`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
                 const newStatus = { ...response.data, cooling: !response.data.cooling };
-                await axios.post(`${serverUrl}/status`, newStatus);
+                await axios.post(`${serverUrl}/status`, newStatus, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
                 fetchStatus();
             } catch (error) {
                 console.error('Error toggling cooling:', error);
@@ -188,9 +258,6 @@
 
         const temperatureChart = createChart(temperatureCtx, 'Temperature', '#ff6384');
         const humidityChart = createChart(humidityCtx, 'Humidity', '#36a2eb');
-
-        setInterval(fetchSensorData, 2000);
-        setInterval(fetchStatus, 2000);
     </script>
 </body>
 </html>

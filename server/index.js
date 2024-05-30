@@ -3,6 +3,8 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const AUTH_TOKEN = '123456';
+
 app.use(cors());
 app.use(express.json());
 
@@ -15,6 +17,15 @@ let deviceStatus = {
     heating: false,
     cooling: false
 };
+
+app.use((req, res, next) => {
+    const token = req.headers['authorization'];
+    if (token === AUTH_TOKEN) {
+        next();
+    } else {
+        res.status(403).json({ error: 'Acesso negado' });
+    }
+});
 
 app.post('/sensor', (req, res) => {
     console.log('Received /sensor POST request with body:', req.body);
