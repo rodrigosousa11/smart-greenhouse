@@ -17,7 +17,8 @@
             padding: 20px;
             background-color: #f0f0f0;
             overflow-x: hidden;
-            overflow-y: hidden;
+            overflow-y: auto;
+            height: 100vh;
         }
         h1 {
             margin-bottom: 20px;
@@ -51,6 +52,7 @@
             display: flex;
             gap: 10px;
             justify-content: center;
+            flex-wrap: wrap;
         }
         .controls button {
             padding: 10px 20px;
@@ -104,9 +106,25 @@
             width: 100%;
             max-width: 800px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
         .current-values div {
             font-size: 16px;
+            text-align: center;
+        }
+        .threshold-inputs {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .threshold-inputs label {
+            margin-bottom: 5px;
+        }
+        .threshold-inputs input {
+            padding: 5px;
+            margin-bottom: 10px;
+            width: 100px;
             text-align: center;
         }
     </style>
@@ -137,6 +155,13 @@
         </div>
         <div class="controls">
             <button id="autoButton" onclick="toggleAuto()">Deactivate Auto Mode</button>
+        </div>
+        <div class="threshold-inputs">
+            <label for="heatingThresholdInput">Heating Threshold (°C):</label>
+            <input type="number" id="heatingThresholdInput" step="0.1">
+            <label for="coolingThresholdInput">Cooling Threshold (°C):</label>
+            <input type="number" id="coolingThresholdInput" step="0.1">
+            <button onclick="updateThresholds()">Update Thresholds</button>
         </div>
     </div>
 
@@ -202,11 +227,16 @@
                 const heating = response.data.heating;
                 const cooling = response.data.cooling;
                 const manualControl = response.data.manualControl;
+                const heatingThreshold = response.data.heatingThreshold;
+                const coolingThreshold = response.data.coolingThreshold;
 
                 document.getElementById('heatingButton').innerText = heating ? 'Heating ON' : 'Heating OFF';
                 document.getElementById('heatingButton').className = heating ? 'on' : 'off';
                 document.getElementById('coolingButton').innerText = cooling ? 'Cooling ON' : 'Cooling OFF';
                 document.getElementById('coolingButton').className = cooling ? 'on' : 'off';
+
+                document.getElementById('heatingThresholdInput').value = heatingThreshold;
+                document.getElementById('coolingThresholdInput').value = coolingThreshold;
 
                 if (manualControl) {
                     document.getElementById('manualControls').style.display = 'flex';
@@ -274,6 +304,40 @@
                 fetchStatus();
             } catch (error) {
                 console.error('Error toggling auto mode:', error);
+            }
+        }
+
+        async function updateThresholds() {
+            try {
+                const heatingThreshold = parseFloat(document.getElementById('heatingThresholdInput').value);
+                const coolingThreshold = parseFloat(document.getElementById('coolingThresholdInput').value);
+                
+                if (isNaN(heatingThreshold) || isNaN(coolingThreshold)) {
+                    alert('Please enter valid numeric values for thresholds.');
+                    return;
+                }
+                
+                const response = await axios.get(`${serverUrl}/status`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                const newStatus = { 
+                    ...response.data, 
+                    heatingThreshold: heatingThreshold, 
+                    coolingThreshold: coolingThreshold 
+                };
+                
+                await axios.post(`${serverUrl}/status`, newStatus, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                fetchStatus();
+            } catch (error) {
+                console.error('Error updating thresholds:', error);
             }
         }
 

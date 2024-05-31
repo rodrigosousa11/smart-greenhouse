@@ -16,7 +16,9 @@ let sensorData = {
 let deviceStatus = {
     heating: false,
     cooling: false,
-    manualControl: false
+    manualControl: false,
+    heatingThreshold: 18.0,
+    coolingThreshold: 25.0
 };
 
 app.use((req, res, next) => {
@@ -53,9 +55,9 @@ app.get('/status', (req, res) => {
 
 app.post('/status', (req, res) => {
     console.log('Received /status POST request with body:', req.body);
-    const { heating, cooling, manualControl } = req.body;
-    if (heating !== undefined && cooling !== undefined && manualControl !== undefined) {
-        deviceStatus = { heating, cooling, manualControl };
+    const { heating, cooling, manualControl, heatingThreshold, coolingThreshold } = req.body;
+    if (heating !== undefined && cooling !== undefined && manualControl !== undefined && heatingThreshold !== undefined && coolingThreshold !== undefined) {
+        deviceStatus = { heating, cooling, manualControl, heatingThreshold, coolingThreshold };
         console.log('Valid device status received:', deviceStatus);
         res.status(200).send('Device status updated');
     } else {
