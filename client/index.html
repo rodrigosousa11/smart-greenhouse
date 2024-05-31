@@ -113,7 +113,7 @@
             text-align: center;
         }
         .threshold-inputs {
-            display: flex;
+            display: none;
             flex-direction: column;
             align-items: center;
             margin-top: 20px;
@@ -122,10 +122,29 @@
             margin-bottom: 5px;
         }
         .threshold-inputs input {
-            padding: 5px;
+            padding: 10px;
             margin-bottom: 10px;
-            width: 100px;
+            width: 150px;
             text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .threshold-inputs button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .threshold-inputs button:hover {
+            background-color: #0056b3;
+        }
+        .threshold-values {
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -154,13 +173,13 @@
             <button id="coolingButton" onclick="toggleCooling()" class="off">Cooling OFF</button>
         </div>
         <div class="controls">
-            <button id="autoButton" onclick="toggleAuto()">Deactivate Auto Mode</button>
+            <button id="autoButton" onclick="toggleAuto()">Activate Auto Mode</button>
         </div>
-        <div class="threshold-inputs">
+        <div class="threshold-inputs" id="thresholdInputs">
             <label for="heatingThresholdInput">Heating Threshold (°C):</label>
-            <input type="number" id="heatingThresholdInput" step="0.1">
+            <input type="number" id="heatingThresholdInput" step="0.1" onfocus="manualUpdateInProgress = true" onblur="manualUpdateInProgress = false">
             <label for="coolingThresholdInput">Cooling Threshold (°C):</label>
-            <input type="number" id="coolingThresholdInput" step="0.1">
+            <input type="number" id="coolingThresholdInput" step="0.1" onfocus="manualUpdateInProgress = true" onblur="manualUpdateInProgress = false">
             <button onclick="updateThresholds()">Update Thresholds</button>
         </div>
     </div>
@@ -168,6 +187,8 @@
     <script>
         const serverUrl = 'https://se-kc56.onrender.com';
         let authToken = localStorage.getItem('authToken');
+        let manualUpdateInProgress = false;
+        let debounceTimeout;
 
         if (authToken) {
             showDashboard();
@@ -185,17 +206,14 @@
         async function login() {
             authToken = document.getElementById('tokenInput').value;
             try {
-                // Validate the token by making a request
                 const response = await axios.get(`${serverUrl}/sensor`, {
                     headers: {
                         'Authorization': authToken
                     }
                 });
-                // If request is successful, save the token and show the dashboard
                 localStorage.setItem('authToken', authToken);
                 showDashboard();
             } catch (error) {
-                // If there's an error, show the error message
                 document.getElementById('errorMessage').style.display = 'block';
                 console.error('Invalid token:', error);
             }
@@ -218,169 +236,184 @@
         }
 
         async function fetchStatus() {
-            try {
-                const response = await axios.get(`${serverUrl}/status`, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                const heating = response.data.heating;
-                const cooling = response.data.cooling;
-                const manualControl = response.data.manualControl;
-                const heatingThreshold = response.data.heatingThreshold;
-                const coolingThreshold = response.data.coolingThreshold;
+            if (manualUpdateInProgress) {
+                return;
+            }
 
-                document.getElementById('heatingButton').innerText = heating ? 'Heating ON' : 'Heating OFF';
-                document.getElementById('heatingButton').className = heating ? 'on' : 'off';
-                document.getElementById('coolingButton').innerText = cooling ? 'Cooling ON' : 'Cooling OFF';
-                document.getElementById('coolingButton').className = cooling ? 'on' : 'off';
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(async () => {
+                try {
+                    const response = await axios.get(`${serverUrl}/status`, {
+                        headers: {
+                            'Authorization': authToken
+                        }
+                    });
 
+                    deviceStatus = response.data;
+                    updateUIStatus(deviceStatus);
+                } catch (error) {
+                    console.error('Error fetching status:', error);
+                }
+            }, 500);
+        }
+
+        function updateUIStatus(status) {
+            const { heating, cooling, heatingThreshold, coolingThreshold, manualControl } = status;
+
+            document.getElementById('heatingButton').innerText = heating ? 'Heating ON' : 'Heating OFF';
+            document.getElementById('heatingButton').className = heating ? 'on' : 'off';
+            document.getElementById('coolingButton').innerText = cooling ? 'Cooling ON' : 'Cooling OFF';
+            document.getElementById('coolingButton').className = cooling ? 'on' : 'off';
+
+
+            if (!manualUpdateInProgress) {
                 document.getElementById('heatingThresholdInput').value = heatingThreshold;
                 document.getElementById('coolingThresholdInput').value = coolingThreshold;
-
-                if (manualControl) {
-                    document.getElementById('manualControls').style.display = 'flex';
-                    document.getElementById('autoButton').innerText = 'Activate Auto Mode';
-                } else {
-                    document.getElementById('manualControls').style.display = 'none';
-                    document.getElementById('autoButton').innerText = 'Deactivate Auto Mode';
-                }
-            } catch (error) {
-                console.error('Error fetching status:', error);
             }
-        }
 
-        async function toggleHeating() {
-            try {
-                const response = await axios.get(`${serverUrl}/status`, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                const newStatus = { ...response.data, heating: !response.data.heating, manualControl: true };
-                await axios.post(`${serverUrl}/status`, newStatus, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                fetchStatus();
-            } catch (error) {
-                console.error('Error toggling heating:', error);
-            }
-        }
-
-        async function toggleCooling() {
-            try {
-                const response = await axios.get(`${serverUrl}/status`, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                const newStatus = { ...response.data, cooling: !response.data.cooling, manualControl: true };
-                await axios.post(`${serverUrl}/status`, newStatus, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                fetchStatus();
-            } catch (error) {
-                console.error('Error toggling cooling:', error);
-            }
-        }
-
-        async function toggleAuto() {
-            try {
-                const response = await axios.get(`${serverUrl}/status`, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                const newStatus = { ...response.data, manualControl: !response.data.manualControl };
-                await axios.post(`${serverUrl}/status`, newStatus, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                fetchStatus();
-            } catch (error) {
-                console.error('Error toggling auto mode:', error);
+            if (manualControl) {
+                document.getElementById('manualControls').style.display = 'flex';
+                document.getElementById('autoButton').innerText = 'Activate Auto Mode';
+                document.getElementById('thresholdInputs').style.display = 'none';
+            } else {
+                document.getElementById('manualControls').style.display = 'none';
+                document.getElementById('autoButton').innerText = 'Deactivate Auto Mode';
+                document.getElementById('thresholdInputs').style.display = 'flex';
             }
         }
 
         async function updateThresholds() {
+            manualUpdateInProgress = true;
             try {
                 const heatingThreshold = parseFloat(document.getElementById('heatingThresholdInput').value);
                 const coolingThreshold = parseFloat(document.getElementById('coolingThresholdInput').value);
-                
+
                 if (isNaN(heatingThreshold) || isNaN(coolingThreshold)) {
                     alert('Please enter valid numeric values for thresholds.');
                     return;
                 }
-                
-                const response = await axios.get(`${serverUrl}/status`, {
-                    headers: {
-                        'Authorization': authToken
-                    }
-                });
-                
-                const newStatus = { 
-                    ...response.data, 
-                    heatingThreshold: heatingThreshold, 
-                    coolingThreshold: coolingThreshold 
+
+                const newStatus = {
+                    ...deviceStatus,
+                    heatingThreshold: heatingThreshold,
+                    coolingThreshold: coolingThreshold,
                 };
-                
+
                 await axios.post(`${serverUrl}/status`, newStatus, {
-                    headers: {
-                        'Authorization': authToken
-                    }
+                    headers: { 'Authorization': authToken }
                 });
-                
-                fetchStatus();
+
+                deviceStatus = newStatus;
+                updateUIStatus(deviceStatus);
             } catch (error) {
                 console.error('Error updating thresholds:', error);
+            } finally {
+                manualUpdateInProgress = false;
             }
         }
 
-        function createChart(ctx, label, color) {
-            return new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: label,
-                        data: [],
-                        borderColor: color,
-                        borderWidth: 2,
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { type: 'time', time: { unit: 'minute' } },
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
+        async function toggleHeating() {
+            const newStatus = {
+                ...deviceStatus,
+                heating: !deviceStatus.heating,
+            };
+            await updateStatus(newStatus);
         }
+
+        async function toggleCooling() {
+            const newStatus = {
+                ...deviceStatus,
+                cooling: !deviceStatus.cooling,
+            };
+            await updateStatus(newStatus);
+        }
+
+        async function toggleAuto() {
+            const newStatus = {
+                ...deviceStatus,
+                manualControl: !deviceStatus.manualControl,
+            };
+            await updateStatus(newStatus);
+        }
+
+        async function updateStatus(newStatus) {
+            try {
+                await axios.post(`${serverUrl}/status`, newStatus, {
+                    headers: { 'Authorization': authToken }
+                });
+                deviceStatus = newStatus;
+                updateUIStatus(deviceStatus);
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+
+        let temperatureChart;
+        let humidityChart;
 
         function updateCharts(temperature, humidity) {
-            const now = new Date();
-            temperatureChart.data.labels.push(now);
-            temperatureChart.data.datasets[0].data.push(temperature);
-            if (temperatureChart.data.labels.length > 20) {
-                temperatureChart.data.labels.shift();
-                temperatureChart.data.datasets[0].data.shift();
+            if (!temperatureChart) {
+                const ctxTemperature = document.getElementById('temperatureChart').getContext('2d');
+                temperatureChart = new Chart(ctxTemperature, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Temperature (°C)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            fill: false,
+                            data: []
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                }
+                            },
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
             }
-            temperatureChart.update();
 
-            humidityChart.data.labels.push(now);
-            humidityChart.data.datasets[0].data.push(humidity);
-            if (humidityChart.data.labels.length > 20) {
-                humidityChart.data.labels.shift();
-                humidityChart.data.datasets[0].data.shift();
+            if (!humidityChart) {
+                const ctxHumidity = document.getElementById('humidityChart').getContext('2d');
+                humidityChart = new Chart(ctxHumidity, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Humidity (%)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            fill: false,
+                            data: []
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                }
+                            },
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
             }
+
+            const now = new Date();
+            temperatureChart.data.datasets[0].data.push({ x: now, y: temperature });
+            humidityChart.data.datasets[0].data.push({ x: now, y: humidity });
+            temperatureChart.update();
             humidityChart.update();
         }
 
@@ -388,9 +421,6 @@
             document.getElementById('currentTemperature').innerText = `Temperature: ${temperature.toFixed(1)} °C`;
             document.getElementById('currentHumidity').innerText = `Humidity: ${humidity.toFixed(1)} %`;
         }
-
-        const temperatureChart = createChart(document.getElementById('temperatureChart').getContext('2d'), 'Temperature', 'red');
-        const humidityChart = createChart(document.getElementById('humidityChart').getContext('2d'), 'Humidity', 'blue');
     </script>
 </body>
 </html>
