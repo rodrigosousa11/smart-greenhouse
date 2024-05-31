@@ -114,12 +114,12 @@
             <div class="chart-title">Humidity (%)</div>
             <canvas id="humidityChart"></canvas>
         </div>
-        <div class="controls">
+        <div class="controls" id="manualControls">
             <button id="heatingButton" onclick="toggleHeating()" class="off">Heating OFF</button>
             <button id="coolingButton" onclick="toggleCooling()" class="off">Cooling OFF</button>
         </div>
         <div class="controls">
-            <button id="reactivateButton" onclick="reactivateAuto()">Reactivate Auto</button>
+            <button id="autoButton" onclick="toggleAuto()">Activate Auto</button>
         </div>
     </div>
 
@@ -190,9 +190,13 @@
                 document.getElementById('coolingButton').innerText = cooling ? 'Cooling ON' : 'Cooling OFF';
                 document.getElementById('coolingButton').className = cooling ? 'on' : 'off';
 
-                document.getElementById('heatingButton').disabled = manualControl || cooling;
-                document.getElementById('coolingButton').disabled = manualControl || heating;
-                document.getElementById('reactivateButton').style.display = manualControl ? 'block' : 'none';
+                if (manualControl) {
+                    document.getElementById('manualControls').style.display = 'flex';
+                    document.getElementById('autoButton').innerText = 'Deactivate Auto';
+                } else {
+                    document.getElementById('manualControls').style.display = 'none';
+                    document.getElementById('autoButton').innerText = 'Activate Auto';
+                }
             } catch (error) {
                 console.error('Error fetching status:', error);
             }
@@ -236,14 +240,14 @@
             }
         }
 
-        async function reactivateAuto() {
+        async function toggleAuto() {
             try {
                 const response = await axios.get(`${serverUrl}/status`, {
                     headers: {
                         'Authorization': authToken
                     }
                 });
-                const newStatus = { ...response.data, manualControl: false, reactivateAuto: true };
+                const newStatus = { ...response.data, manualControl: !response.data.manualControl };
                 await axios.post(`${serverUrl}/status`, newStatus, {
                     headers: {
                         'Authorization': authToken
@@ -251,7 +255,7 @@
                 });
                 fetchStatus();
             } catch (error) {
-                console.error('Error reactivating auto control:', error);
+                console.error('Error toggling auto mode:', error);
             }
         }
 
@@ -281,27 +285,25 @@
 
         function updateCharts(temperature, humidity) {
             const now = new Date();
-            if (temperatureChart.data.labels.length > 10) {
+            temperatureChart.data.labels.push(now);
+            temperatureChart.data.datasets[0].data.push(temperature);
+            if (temperatureChart.data.labels.length > 20) {
                 temperatureChart.data.labels.shift();
                 temperatureChart.data.datasets[0].data.shift();
             }
-            if (humidityChart.data.labels.length > 10) {
+            temperatureChart.update();
+
+            humidityChart.data.labels.push(now);
+            humidityChart.data.datasets[0].data.push(humidity);
+            if (humidityChart.data.labels.length > 20) {
                 humidityChart.data.labels.shift();
                 humidityChart.data.datasets[0].data.shift();
             }
-            temperatureChart.data.labels.push(now);
-            temperatureChart.data.datasets[0].data.push(temperature);
-            humidityChart.data.labels.push(now);
-            humidityChart.data.datasets[0].data.push(humidity);
-            temperatureChart.update();
             humidityChart.update();
         }
 
-        const temperatureCtx = document.getElementById('temperatureChart').getContext('2d');
-        const humidityCtx = document.getElementById('humidityChart').getContext('2d');
-
-        const temperatureChart = createChart(temperatureCtx, 'Temperature', '#ff6384');
-        const humidityChart = createChart(humidityCtx, 'Humidity', '#36a2eb');
+        const temperatureChart = createChart(document.getElementById('temperatureChart').getContext('2d'), 'Temperature', 'red');
+        const humidityChart = createChart(document.getElementById('humidityChart').getContext('2d'), 'Humidity', 'blue');
     </script>
 </body>
 </html>
