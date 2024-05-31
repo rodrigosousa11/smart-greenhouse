@@ -118,6 +118,9 @@
             <button id="heatingButton" onclick="toggleHeating()" class="off">Heating OFF</button>
             <button id="coolingButton" onclick="toggleCooling()" class="off">Cooling OFF</button>
         </div>
+        <div class="controls">
+            <button id="reactivateButton" onclick="reactivateAuto()">Reactivate Auto</button>
+        </div>
     </div>
 
     <script>
@@ -180,13 +183,16 @@
                 });
                 const heating = response.data.heating;
                 const cooling = response.data.cooling;
+                const manualControl = response.data.manualControl;
+
                 document.getElementById('heatingButton').innerText = heating ? 'Heating ON' : 'Heating OFF';
                 document.getElementById('heatingButton').className = heating ? 'on' : 'off';
                 document.getElementById('coolingButton').innerText = cooling ? 'Cooling ON' : 'Cooling OFF';
                 document.getElementById('coolingButton').className = cooling ? 'on' : 'off';
 
-                document.getElementById('heatingButton').disabled = cooling;
-                document.getElementById('coolingButton').disabled = heating;
+                document.getElementById('heatingButton').disabled = manualControl || cooling;
+                document.getElementById('coolingButton').disabled = manualControl || heating;
+                document.getElementById('reactivateButton').style.display = manualControl ? 'block' : 'none';
             } catch (error) {
                 console.error('Error fetching status:', error);
             }
@@ -199,7 +205,7 @@
                         'Authorization': authToken
                     }
                 });
-                const newStatus = { ...response.data, heating: !response.data.heating };
+                const newStatus = { ...response.data, heating: !response.data.heating, manualControl: true };
                 await axios.post(`${serverUrl}/status`, newStatus, {
                     headers: {
                         'Authorization': authToken
@@ -218,7 +224,7 @@
                         'Authorization': authToken
                     }
                 });
-                const newStatus = { ...response.data, cooling: !response.data.cooling };
+                const newStatus = { ...response.data, cooling: !response.data.cooling, manualControl: true };
                 await axios.post(`${serverUrl}/status`, newStatus, {
                     headers: {
                         'Authorization': authToken
@@ -227,6 +233,25 @@
                 fetchStatus();
             } catch (error) {
                 console.error('Error toggling cooling:', error);
+            }
+        }
+
+        async function reactivateAuto() {
+            try {
+                const response = await axios.get(`${serverUrl}/status`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                const newStatus = { ...response.data, manualControl: false, reactivateAuto: true };
+                await axios.post(`${serverUrl}/status`, newStatus, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                fetchStatus();
+            } catch (error) {
+                console.error('Error reactivating auto control:', error);
             }
         }
 
