@@ -16,6 +16,8 @@
             margin: 0;
             padding: 20px;
             background-color: #f0f0f0;
+            overflow-x: hidden;
+            overflow-y: hidden;
         }
         h1 {
             margin-bottom: 20px;
@@ -34,10 +36,10 @@
         }
         .chart-container {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         .chart-container canvas {
-            max-height: 250px;
+            max-height: 200px;
         }
         .chart-title {
             font-size: 18px;
@@ -96,6 +98,17 @@
             margin-top: 10px;
             display: none;
         }
+        .current-values {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        .current-values div {
+            font-size: 16px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -114,12 +127,16 @@
             <div class="chart-title">Humidity (%)</div>
             <canvas id="humidityChart"></canvas>
         </div>
+        <div class="current-values">
+            <div id="currentTemperature">Temperature: --.- °C</div>
+            <div id="currentHumidity">Humidity: --.- %</div>
+        </div>
         <div class="controls" id="manualControls">
             <button id="heatingButton" onclick="toggleHeating()" class="off">Heating OFF</button>
             <button id="coolingButton" onclick="toggleCooling()" class="off">Cooling OFF</button>
         </div>
         <div class="controls">
-            <button id="autoButton" onclick="toggleAuto()">Activate Auto</button>
+            <button id="autoButton" onclick="toggleAuto()">Deactivate Auto Mode</button>
         </div>
     </div>
 
@@ -169,6 +186,7 @@
                 const temperature = response.data.temperature;
                 const humidity = response.data.humidity;
                 updateCharts(temperature, humidity);
+                updateCurrentValues(temperature, humidity);
             } catch (error) {
                 console.error('Error fetching sensor data:', error);
             }
@@ -192,10 +210,10 @@
 
                 if (manualControl) {
                     document.getElementById('manualControls').style.display = 'flex';
-                    document.getElementById('autoButton').innerText = 'Deactivate Auto';
+                    document.getElementById('autoButton').innerText = 'Activate Auto Mode';
                 } else {
                     document.getElementById('manualControls').style.display = 'none';
-                    document.getElementById('autoButton').innerText = 'Activate Auto';
+                    document.getElementById('autoButton').innerText = 'Deactivate Auto Mode';
                 }
             } catch (error) {
                 console.error('Error fetching status:', error);
@@ -300,6 +318,11 @@
                 humidityChart.data.datasets[0].data.shift();
             }
             humidityChart.update();
+        }
+
+        function updateCurrentValues(temperature, humidity) {
+            document.getElementById('currentTemperature').innerText = `Temperature: ${temperature.toFixed(1)} °C`;
+            document.getElementById('currentHumidity').innerText = `Humidity: ${humidity.toFixed(1)} %`;
         }
 
         const temperatureChart = createChart(document.getElementById('temperatureChart').getContext('2d'), 'Temperature', 'red');
