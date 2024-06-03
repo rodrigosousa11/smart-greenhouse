@@ -9,10 +9,10 @@
 #define HEATER_PIN D5
 #define FAN_PIN D6
 
-const char* ssid = "Vodafone-AD8126";
-const char* password = "zVB6888Weq";
+const char* ssid = "your-wifi-password";
+const char* password = "your-wifi-password";
 const char* serverUrl = "https://se-kc56.onrender.com";
-const char* authToken = "123456";
+const char* authToken = "111111";
 
 DHT dht(DHTPIN, DHTTYPE);
 
